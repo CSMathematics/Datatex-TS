@@ -5,14 +5,14 @@ import icon from '../../resources/icon.png?asset'
 import { DatabaseManager } from './database'
 
 // Κρατάμε το instance της βάσης σε global μεταβλητή για να μην χαθεί
-let dbManager: DatabaseManager;
+let dbManager: DatabaseManager
 
 function createWindow(): void {
   // Το path για το preload script
-  const preloadPath = join(__dirname, '../preload/index.js');
-  
-  console.log('--- MAIN: Creating Window ---');
-  console.log('--- PRELOAD PATH:', preloadPath);
+  const preloadPath = join(__dirname, '../preload/index.js')
+
+  console.log('--- MAIN: Creating Window ---')
+  console.log('--- PRELOAD PATH:', preloadPath)
 
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -22,9 +22,9 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: preloadPath,
-      sandbox: false,          // ΑΠΑΡΑΙΤΗΤΟ για να τρέξει η SQLite (native modules)
-      contextIsolation: true,  // ΑΣΦΑΛΕΙΑ: Πρέπει να είναι true για το bridge
-      nodeIntegration: false   // ΑΣΦΑΛΕΙΑ: Πρέπει να είναι false
+      sandbox: false, // ΑΠΑΡΑΙΤΗΤΟ για να τρέξει η SQLite (native modules)
+      contextIsolation: true, // ΑΣΦΑΛΕΙΑ: Πρέπει να είναι true για το bridge
+      nodeIntegration: false // ΑΣΦΑΛΕΙΑ: Πρέπει να είναι false
     }
   })
 
@@ -36,10 +36,10 @@ function createWindow(): void {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
-  
+
   // Άνοιγμα DevTools σε development mode για debugging
   if (is.dev) {
-    mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools()
   }
 
   // Φόρτωση URL (Dev) ή Αρχείου (Prod)
@@ -64,14 +64,14 @@ app.whenReady().then(() => {
   // 1. Αρχικοποίηση Βάσης Δεδομένων
   try {
     // Βεβαιώσου ότι το αρχείο database.ts υπάρχει και εξάγει την κλάση σωστά
-    dbManager = new DatabaseManager(); 
-    console.log('--- MAIN: Database Initialized Successfully ---');
+    dbManager = new DatabaseManager()
+    console.log('--- MAIN: Database Initialized Successfully ---')
   } catch (error) {
-    console.error('--- MAIN: Database FATAL ERROR ---', error);
+    console.error('--- MAIN: Database FATAL ERROR ---', error)
   }
-  
+
   // 2. Ρύθμιση IPC Handlers (Η "Γέφυρα" με το React)
-  setupIpcHandlers();
+  setupIpcHandlers()
 
   createWindow()
 
@@ -89,57 +89,55 @@ app.on('window-all-closed', () => {
 // --- IPC HANDLERS ---
 
 function setupIpcHandlers() {
-  
   // Λήψη όλων των αρχείων
   ipcMain.handle('get-files', () => {
-    console.log('--- IPC: UI requested files ---');
-    if (!dbManager) return [];
+    console.log('--- IPC: UI requested files ---')
+    if (!dbManager) return []
     try {
-      const files = dbManager.getAllFiles();
-      return files;
+      const files = dbManager.getAllFiles()
+      return files
     } catch (e) {
-      console.error('IPC get-files Error:', e);
-      return [];
+      console.error('IPC get-files Error:', e)
+      return []
     }
-  });
+  })
 
   // Δημιουργία νέου αρχείου
   ipcMain.handle('create-file', (_, fileData) => {
-    console.log('--- IPC: Creating file ---', fileData.title);
-    if (!dbManager) return null;
+    console.log('--- IPC: Creating file ---', fileData.title)
+    if (!dbManager) return null
     try {
       // Υποθέτουμε ότι η μέθοδος επιστρέφει το ID ή το αντικείμενο του νέου αρχείου
-      return dbManager.createFile(fileData); 
+      return dbManager.createFile(fileData)
     } catch (e) {
-      console.error('IPC create-file Error:', e);
-      throw e;
+      console.error('IPC create-file Error:', e)
+      throw e
     }
-  });
+  })
 
   // Ενημέρωση περιεχομένου (Save)
   ipcMain.handle('update-file', (_, id, content) => {
-    console.log(`--- IPC: Updating file ${id} ---`);
-    if (!dbManager) return false;
+    console.log(`--- IPC: Updating file ${id} ---`)
+    if (!dbManager) return false
     try {
-      dbManager.updateFile(id, content);
-      return true;
+      dbManager.updateFile(id, content)
+      return true
     } catch (e) {
-      console.error('IPC update-file Error:', e);
-      throw e;
+      console.error('IPC update-file Error:', e)
+      throw e
     }
-  });
+  })
 
   // Διαγραφή αρχείου
   ipcMain.handle('delete-file', (_, id) => {
-    console.log(`--- IPC: Deleting file ${id} ---`);
-    if (!dbManager) return false;
+    console.log(`--- IPC: Deleting file ${id} ---`)
+    if (!dbManager) return false
     try {
-      dbManager.deleteFile(id);
-      return true;
+      dbManager.deleteFile(id)
+      return true
     } catch (e) {
-      console.error('IPC delete-file Error:', e);
-      throw e;
+      console.error('IPC delete-file Error:', e)
+      throw e
     }
-  });
-
+  })
 }
