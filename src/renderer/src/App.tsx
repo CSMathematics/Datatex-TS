@@ -267,6 +267,7 @@ const App: React.FC = () => {
   return (
     <ConfigProvider theme={{ algorithm: theme.darkAlgorithm, token: { colorBgBase: '#1f1f1f' } }}>
       <Layout style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
+<<<<<<< HEAD
         {/* 1. NEW ACTIVITY BAR COMPONENT */}
         <ActivityBar activeActivity={activeActivity} onActivityChange={setActiveActivity} />
 
@@ -403,6 +404,148 @@ const App: React.FC = () => {
                 <Empty description="No PDF" />
               </div>
             </Sider>
+=======
+        <Layout style={{ flex: 1, overflow: 'hidden' }}>
+          {/* 1. NEW ACTIVITY BAR COMPONENT */}
+          <ActivityBar activeActivity={activeActivity} onActivityChange={setActiveActivity} />
+
+          {/* 2. NEW SIDE PANEL COMPONENT */}
+          <SidePanel
+            activeActivity={activeActivity}
+            treeData={treeData}
+            onNodeSelect={onNodeSelect}
+            onNewFile={() => setIsNewFileOpen(true)}
+            onOpenWizard={(name) => {
+              if (name === 'preamble') setIsPreambleOpen(true)
+              if (name === 'table') setIsTableOpen(true)
+            }}
+          />
+
+          {/* 3. MAIN EDITOR AREA (Tabs & Content) */}
+          {/* Αυτό το κομμάτι μπορεί να γίνει ξεχωριστό component "EditorArea.tsx" στο μέλλον */}
+          <Layout style={{ flex: 1, minWidth: 0, background: '#1e1e1e' }}>
+            <div style={{ height: 35, background: '#252526', display: 'flex', overflowX: 'auto' }}>
+              {openFiles.length === 0 ? (
+                <div style={{ padding: '8px 16px', color: '#888', fontSize: 12 }}>
+                  No files open
+                </div>
+              ) : (
+                <Tabs
+                  type="editable-card"
+                  activeKey={activeFileId || undefined}
+                  onChange={setActiveFileId}
+                  onEdit={closeTab}
+                  hideAdd
+                  size="small"
+                  items={openFiles.map((f) => ({
+                    label: (
+                      <span>
+                        {f.title}
+                        {f.isDirty && ' ●'}
+                      </span>
+                    ),
+                    key: String(f.id),
+                    closable: true
+                  }))}
+                  tabBarStyle={{ margin: 0, height: 35, borderBottom: '1px solid #303030' }}
+                />
+              )}
+            </div>
+
+            <Header
+              style={{
+                padding: '0 16px',
+                background: '#1e1e1e',
+                height: 40,
+                display: 'flex',
+                alignItems: 'center',
+                borderBottom: `1px solid ${colorBorder}`
+              }}
+            >
+              <span style={{ color: '#aaa', fontSize: 12 }}>
+                {activeFileId && openFiles.find((f) => String(f.id) === activeFileId)?.title}
+              </span>
+              <div style={{ flex: 1 }} />
+              {activeFileId && (
+                <Tooltip title="Delete">
+                  <Button type="text" danger icon={<DeleteOutlined />} onClick={handleDeleteFile} />
+                </Tooltip>
+              )}
+              <Tooltip title="Save">
+                <Button
+                  type="text"
+                  icon={<SaveOutlined />}
+                  onClick={saveCurrentFile}
+                  style={{ color: '#ccc' }}
+                />
+              </Tooltip>
+              <Button
+                type="primary"
+                size="small"
+                icon={<PlayCircleOutlined />}
+                style={{ background: '#237804', marginLeft: 8 }}
+              >
+                Compile
+              </Button>
+            </Header>
+
+            <Layout>
+              <Content style={{ height: '100%', background: '#1f1f1f' }}>
+                {activeFileId ? (
+                  <Editor
+                    height="100%"
+                    defaultLanguage="latex"
+                    value={openFiles.find((f) => String(f.id) === activeFileId)?.content || ''}
+                    onChange={handleEditorChange}
+                    theme="datatex-dark"
+                    beforeMount={handleEditorWillMount}
+                    onMount={handleEditorDidMount}
+                    options={{
+                      minimap: { enabled: true },
+                      fontSize: 14,
+                      fontFamily: "'Fira Code', monospace"
+                    }}
+                  />
+                ) : (
+                  <Empty
+                    description="Select a file"
+                    style={{ marginTop: 100 }}
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
+                )}
+              </Content>
+              <Sider
+                width="40%"
+                theme="light"
+                style={{ borderLeft: `1px solid ${colorBorder}`, background: '#f0f0f0' }}
+              >
+                <div
+                  style={{
+                    height: 32,
+                    background: '#e0e0e0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    paddingLeft: 8,
+                    fontSize: 11,
+                    fontWeight: 'bold',
+                    color: '#555'
+                  }}
+                >
+                  PDF PREVIEW
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%'
+                  }}
+                >
+                  <Empty description="No PDF" />
+                </div>
+              </Sider>
+            </Layout>
+>>>>>>> origin/improve-latex-highlighting-14525821387740528476
           </Layout>
         </Layout>
 
