@@ -12,7 +12,8 @@ export const dataTexDarkTheme = {
     { token: 'delimiter.bracket', foreground: 'FFD700' }, // [ ... ]
     { token: 'delimiter.parenthesis', foreground: 'D4D4D4' }, // { ... }
     { token: 'number', foreground: 'B5CEA8' },
-    { token: 'tag', foreground: '4EC9B0' } // Math symbols might fall here
+    { token: 'tag', foreground: '4EC9B0' }, // Math symbols might fall here
+    { token: 'attribute.name', foreground: 'DCDCAA' } // Formatting commands like \textbf
   ],
   colors: {
     'editor.background': '#1f1f1f', // Το σκούρο γκρι του VSCode
