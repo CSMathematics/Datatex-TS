@@ -3,6 +3,9 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { DatabaseManager } from './database'
+import fs from 'fs'
+import { exec } from 'child_process'
+import os from 'os'
 
 // Κρατάμε το instance της βάσης σε global μεταβλητή για να μην χαθεί
 let dbManager: DatabaseManager
@@ -138,6 +141,63 @@ function setupIpcHandlers() {
     } catch (e) {
       console.error('IPC delete-file Error:', e)
       throw e
+    }
+  })
+
+  // Μεταγλώττιση (Compile)
+  ipcMain.handle('compile-file', async (_, content) => {
+    console.log('--- IPC: Compiling LaTeX ---')
+    try {
+      // Δημιουργία προσωρινού φακέλου
+      const tempDir = fs.mkdtempSync(join(os.tmpdir(), 'datatex-'))
+      const texPath = join(tempDir, 'main.tex')
+      const pdfPath = join(tempDir, 'main.pdf')
+
+      // Εγγραφή του κώδικα στο αρχείο .tex
+      fs.writeFileSync(texPath, content)
+
+      // Εκτέλεση pdflatex
+      // Σημείωση: Πρέπει το pdflatex να είναι στο PATH του συστήματος
+      return new Promise((resolve) => {
+        exec(
+          `pdflatex -interaction=nonstopmode -output-directory="${tempDir}" "${texPath}"`,
+          { timeout: 30000 },
+          (error, stdout, stderr) => {
+            if (error) {
+              console.error('Compilation Error:', error)
+              // Επιστροφή logs ακόμα και σε λάθος
+              resolve({
+                success: false,
+                logs: stdout + '\n' + stderr
+              })
+              return
+            }
+
+            // Αν πέτυχε, διαβάζουμε το PDF
+            if (fs.existsSync(pdfPath)) {
+              const pdfData = fs.readFileSync(pdfPath)
+              const base64Pdf = pdfData.toString('base64')
+
+              // Καθαρισμός temp (προαιρετικά, για τώρα το αφήνουμε για debugging ή το σβήνουμε)
+              // fs.rmSync(tempDir, { recursive: true, force: true });
+
+              resolve({
+                success: true,
+                data: base64Pdf,
+                logs: stdout
+              })
+            } else {
+              resolve({
+                success: false,
+                logs: 'PDF not found after compilation.\n' + stdout
+              })
+            }
+          }
+        )
+      })
+    } catch (e: any) {
+      console.error('IPC compile-file Unexpected Error:', e)
+      return { success: false, logs: e.message }
     }
   })
 }

@@ -14,7 +14,10 @@ const api = {
   updateFile: (id, content) => ipcRenderer.invoke('update-file', id, content),
 
   // Διαγραφή: Στέλνει το ID του αρχείου προς διαγραφή
-  deleteFile: (id) => ipcRenderer.invoke('delete-file', id)
+  deleteFile: (id) => ipcRenderer.invoke('delete-file', id),
+
+  // Μεταγλώττιση: Στέλνει το περιεχόμενο Latex για compilation
+  compileFile: (content) => ipcRenderer.invoke('compile-file', content)
 }
 
 // Use `contextBridge` APIs to expose IPC to the renderer

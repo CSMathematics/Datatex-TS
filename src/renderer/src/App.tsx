@@ -48,6 +48,7 @@ const App: React.FC = () => {
   const [activeFileId, setActiveFileId] = useState<string | null>(null)
   const [statusText, setStatusText] = useState<string>('Ready')
   const [chapters, setChapters] = useState<string[]>([])
+  const [pdfData, setPdfData] = useState<string | null>(null)
 
   // Modals Visibility
   const [isNewFileOpen, setIsNewFileOpen] = useState(false)
@@ -173,6 +174,55 @@ const App: React.FC = () => {
     )
   }
 
+  const handleCompile = async () => {
+    if (!activeFileId) return
+    const currentFile = openFiles.find((f) => String(f.id) === activeFileId)
+    if (!currentFile) return
+
+    setStatusText('Compiling...')
+    try {
+      // First save content
+      await saveCurrentFile()
+
+      if (!window.api) {
+        message.warning('API not available (Mock mode)')
+        setStatusText('Ready')
+        return
+      }
+
+      const result = await window.api.compileFile(currentFile.content)
+      if (result.success && result.data) {
+        setPdfData(result.data)
+        message.success('Compilation successful')
+        setStatusText('Ready')
+      } else {
+        message.error('Compilation failed')
+        console.error(result.logs)
+        Modal.error({
+          title: 'Compilation Error',
+          content: (
+            <div
+              style={{
+                maxHeight: '400px',
+                overflow: 'auto',
+                whiteSpace: 'pre-wrap',
+                fontFamily: 'monospace'
+              }}
+            >
+              {result.logs}
+            </div>
+          ),
+          width: 800
+        })
+        setStatusText('Compilation Failed')
+      }
+    } catch (error) {
+      console.error(error)
+      message.error('Compilation error')
+      setStatusText('Error')
+    }
+  }
+
   const saveCurrentFile = async () => {
     const currentFile = openFiles.find((f) => String(f.id) === activeFileId)
     if (!currentFile || !currentFile.isDirty) return
@@ -267,7 +317,22 @@ const App: React.FC = () => {
   return (
     <ConfigProvider theme={{ algorithm: theme.darkAlgorithm, token: { colorBgBase: '#1f1f1f' } }}>
       <Layout style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
-<<<<<<< HEAD
+        <Layout style={{ flex: 1, overflow: 'hidden' }}>
+          {/* 1. NEW ACTIVITY BAR COMPONENT */}
+          <ActivityBar activeActivity={activeActivity} onActivityChange={setActiveActivity} />
+
+          {/* 2. NEW SIDE PANEL COMPONENT */}
+          <SidePanel
+            activeActivity={activeActivity}
+            treeData={treeData}
+            onNodeSelect={onNodeSelect}
+            onNewFile={() => setIsNewFileOpen(true)}
+            onOpenWizard={(name) => {
+              if (name === 'preamble') setIsPreambleOpen(true)
+              if (name === 'table') setIsTableOpen(true)
+            }}
+          />
+
         {/* 1. NEW ACTIVITY BAR COMPONENT */}
         <ActivityBar activeActivity={activeActivity} onActivityChange={setActiveActivity} />
 
@@ -404,23 +469,6 @@ const App: React.FC = () => {
                 <Empty description="No PDF" />
               </div>
             </Sider>
-=======
-        <Layout style={{ flex: 1, overflow: 'hidden' }}>
-          {/* 1. NEW ACTIVITY BAR COMPONENT */}
-          <ActivityBar activeActivity={activeActivity} onActivityChange={setActiveActivity} />
-
-          {/* 2. NEW SIDE PANEL COMPONENT */}
-          <SidePanel
-            activeActivity={activeActivity}
-            treeData={treeData}
-            onNodeSelect={onNodeSelect}
-            onNewFile={() => setIsNewFileOpen(true)}
-            onOpenWizard={(name) => {
-              if (name === 'preamble') setIsPreambleOpen(true)
-              if (name === 'table') setIsTableOpen(true)
-            }}
-          />
-
           {/* 3. MAIN EDITOR AREA (Tabs & Content) */}
           {/* Αυτό το κομμάτι μπορεί να γίνει ξεχωριστό component "EditorArea.tsx" στο μέλλον */}
           <Layout style={{ flex: 1, minWidth: 0, background: '#1e1e1e' }}>
@@ -484,6 +532,7 @@ const App: React.FC = () => {
                 size="small"
                 icon={<PlayCircleOutlined />}
                 style={{ background: '#237804', marginLeft: 8 }}
+                onClick={handleCompile}
               >
                 Compile
               </Button>
@@ -538,14 +587,24 @@ const App: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    height: '100%'
+                    height: '100%',
+                    background: '#525659', // Typical PDF viewer background
+                    overflow: 'hidden'
                   }}
                 >
-                  <Empty description="No PDF" />
+                  {pdfData ? (
+                    <embed
+                      src={`data:application/pdf;base64,${pdfData}`}
+                      type="application/pdf"
+                      width="100%"
+                      height="100%"
+                    />
+                  ) : (
+                    <Empty description="No PDF" imageStyle={{ opacity: 0.5 }} />
+                  )}
                 </div>
               </Sider>
             </Layout>
->>>>>>> origin/improve-latex-highlighting-14525821387740528476
           </Layout>
         </Layout>
 

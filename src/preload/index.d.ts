@@ -17,6 +17,7 @@ declare global {
       createFile: (file: Partial<DBFile>) => Promise<DBFile>
       updateFile: (id: number, content: string) => Promise<boolean>
       deleteFile: (id: number) => Promise<boolean>
+      compileFile: (content: string) => Promise<{ success: boolean; data?: string; logs: string }>
     }
   }
 }
