@@ -14,7 +14,7 @@ interface NewFileModalProps {
 const NewFileModal: React.FC<NewFileModalProps> = ({ open, onCancel, onCreate, chapters }) => {
   const [form] = Form.useForm()
 
-  const handleOk = () => {
+  const handleOk = (): void => {
     form
       .validateFields()
       .then((values) => {

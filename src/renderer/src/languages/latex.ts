@@ -38,46 +38,111 @@ export const latexLanguage: languages.IMonarchLanguage = {
   tokenPostfix: '.latex',
 
   keywords: [
-    'begin', 'end', 'documentclass', 'usepackage', 'newcommand', 'renewcommand',
-    'providecommand', 'newenvironment', 'renewenvironment', 'newtheorem',
-    'input', 'include', 'if', 'else', 'fi', 'def', 'edef', 'gdef', 'xdef'
+    'begin',
+    'end',
+    'documentclass',
+    'usepackage',
+    'newcommand',
+    'renewcommand',
+    'providecommand',
+    'newenvironment',
+    'renewenvironment',
+    'newtheorem',
+    'input',
+    'include',
+    'if',
+    'else',
+    'fi',
+    'def',
+    'edef',
+    'gdef',
+    'xdef'
   ],
 
   sections: [
-    'part', 'chapter', 'section', 'subsection', 'subsubsection', 'paragraph', 'subparagraph'
+    'part',
+    'chapter',
+    'section',
+    'subsection',
+    'subsubsection',
+    'paragraph',
+    'subparagraph'
   ],
 
   formatting: [
-    'textbf', 'textit', 'texttt', 'textsf', 'textsc', 'textmd', 'textlf',
-    'emph', 'underline', 'boldmath', 'bf', 'it', 'tt', 'sc', 'sf', 'sl', 'rm'
+    'textbf',
+    'textit',
+    'texttt',
+    'textsf',
+    'textsc',
+    'textmd',
+    'textlf',
+    'emph',
+    'underline',
+    'boldmath',
+    'bf',
+    'it',
+    'tt',
+    'sc',
+    'sf',
+    'sl',
+    'rm'
   ],
 
   functions: [
-    'label', 'ref', 'cite', 'pageref', 'url', 'href',
-    'title', 'author', 'date', 'maketitle', 'tableofcontents', 'listoffigures', 'listoftables',
-    'item', 'caption', 'footnote', 'centering', 'raggedright', 'raggedleft',
-    'newpage', 'clearpage', 'cleardoublepage', 'vspace', 'hspace',
-    'bibliographystyle', 'bibliography', 'printbibliography'
+    'label',
+    'ref',
+    'cite',
+    'pageref',
+    'url',
+    'href',
+    'title',
+    'author',
+    'date',
+    'maketitle',
+    'tableofcontents',
+    'listoffigures',
+    'listoftables',
+    'item',
+    'caption',
+    'footnote',
+    'centering',
+    'raggedright',
+    'raggedleft',
+    'newpage',
+    'clearpage',
+    'cleardoublepage',
+    'vspace',
+    'hspace',
+    'bibliographystyle',
+    'bibliography',
+    'printbibliography'
   ],
 
   tokenizer: {
     root: [
       // Environments: \begin{...} and \end{...}
-      [/(\\(?:begin|end))(\s*)(\{)([a-zA-Z0-9*]+)(\})/, ['keyword', '', '@brackets', 'tag', '@brackets']],
+      [
+        /(\\(?:begin|end))(\s*)(\{)([a-zA-Z0-9*]+)(\})/,
+        ['keyword', '', '@brackets', 'tag', '@brackets']
+      ],
 
       // Commands
-      [/(\\)([a-zA-Z@]+)/, [
-        'keyword',
-        {
-          cases: {
-            '@keywords': 'keyword',
-            '@sections': 'tag',
-            '@formatting': 'attribute.name',
-            '@functions': 'variable',
-            '@default': 'keyword'
+      [
+        /(\\)([a-zA-Z@]+)/,
+        [
+          'keyword',
+          {
+            cases: {
+              '@keywords': 'keyword',
+              '@sections': 'tag',
+              '@formatting': 'attribute.name',
+              '@functions': 'variable',
+              '@default': 'keyword'
+            }
           }
-        }
-      ]],
+        ]
+      ],
 
       // Escaped characters or single-char commands
       [/(\\.)/, 'keyword'],

@@ -17,7 +17,10 @@ const api = {
   deleteFile: (id) => ipcRenderer.invoke('delete-file', id),
 
   // Μεταγλώττιση: Στέλνει το περιεχόμενο Latex για compilation
-  compileFile: (content) => ipcRenderer.invoke('compile-file', content)
+  compileFile: (content) => ipcRenderer.invoke('compile-file', content),
+
+  // Στατιστικά DB
+  getDbStats: () => ipcRenderer.invoke('get-db-stats')
 }
 
 // Use `contextBridge` APIs to expose IPC to the renderer

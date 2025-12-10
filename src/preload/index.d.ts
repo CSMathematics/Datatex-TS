@@ -1,5 +1,3 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
-
 // Ορισμός της δομής του αρχείου
 interface DBFile {
   id: number

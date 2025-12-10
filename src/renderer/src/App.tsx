@@ -12,43 +12,59 @@ import { latexLanguage, latexConfiguration } from './languages/latex'
 import ActivityBar from './components/layout/ActivityBar'
 import SidePanel from './components/layout/SidePanel'
 import StatusBar from './components/layout/StatusBar'
+import BottomPanel from './components/layout/BottomPanel'
 
 // 3. Wizards
 import NewFileModal from './components/wizards/NewFileModal'
 import PreambleWizard from './components/wizards/PreambleWizard'
 import TableWizard from './components/wizards/TableWizard'
+import PreambleWizardView from './components/wizards/PreambleWizardView'
+import { AppSettings, DBFile } from './types'
 
 const { Header, Content, Sider } = Layout
 
-// Interfaces (Μπορούν να μεταφερθούν στο types.d.ts)
-interface DBFile {
-  id: number
+interface OpenedTab {
+  key: string
   title: string
-  content: string
-  type: string
-  chapter: string
-}
-interface TabFile extends DBFile {
+  type: 'file' | 'wizard'
   isDirty?: boolean
+  // For files
+  fileId?: number
+  content?: string
   originalContent?: string
+  // For wizards
+  wizardType?: 'preamble' | 'table'
 }
 
 const App: React.FC = () => {
   const {
-    token: { colorBgContainer, colorBorder }
+    token: { colorBorder }
   } = theme.useToken()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const editorRef = useRef<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const monacoRef = useRef<any>(null)
 
   // --- STATE ---
   const [activeActivity, setActiveActivity] = useState<string>('explorer')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [treeData, setTreeData] = useState<any[]>([])
   const [dbFiles, setDbFiles] = useState<DBFile[]>([])
-  const [openFiles, setOpenFiles] = useState<TabFile[]>([])
+  const [openFiles, setOpenFiles] = useState<OpenedTab[]>([])
   const [activeFileId, setActiveFileId] = useState<string | null>(null)
   const [statusText, setStatusText] = useState<string>('Ready')
   const [chapters, setChapters] = useState<string[]>([])
   const [pdfData, setPdfData] = useState<string | null>(null)
+  const [compilationLogs, setCompilationLogs] = useState<string>('')
+  const [isBottomPanelOpen, setIsBottomPanelOpen] = useState(false)
+
+  // Settings State
+  const [settings, setSettings] = useState<AppSettings>({
+    fontSize: 14,
+    minimap: true,
+    wordWrap: false,
+    lineNumbers: true
+  })
 
   // Modals Visibility
   const [isNewFileOpen, setIsNewFileOpen] = useState(false)
@@ -57,8 +73,12 @@ const App: React.FC = () => {
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    loadFilesFromDB()
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const init = async (): Promise<void> => {
+      await loadFilesFromDB()
+    }
+    init()
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
         saveCurrentFile()
@@ -66,10 +86,11 @@ const App: React.FC = () => {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFileId, openFiles])
 
   // --- DATA LOADING ---
-  const loadFilesFromDB = async () => {
+  const loadFilesFromDB = async (): Promise<void> => {
     try {
       if (!window.api) {
         console.warn('API missing. Mock data loaded.')
@@ -83,14 +104,17 @@ const App: React.FC = () => {
       const files = await window.api.getFiles()
       setDbFiles(files)
       processFiles(files)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
+      console.error(error)
       message.error('Failed to load files')
     }
   }
 
-  const processFiles = (files: DBFile[]) => {
+  const processFiles = (files: DBFile[]): void => {
     // Μετατροπή λίστας σε δενδροειδή μορφή για το SidePanel
     // (Ο κώδικας μετατροπής παραμένει εδώ καθώς αφορά τα δεδομένα του App)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const treeMap: Record<string, any> = {}
     const uniqueChapters = new Set<string>()
     files.forEach((file) => {
@@ -124,14 +148,15 @@ const App: React.FC = () => {
   }
 
   // --- EDITOR LOGIC ---
-  function handleEditorWillMount(monaco: Monaco) {
+  function handleEditorWillMount(monaco: Monaco): void {
     monaco.languages.register({ id: 'latex' })
     monaco.languages.setLanguageConfiguration('latex', latexConfiguration)
     monaco.languages.setMonarchTokensProvider('latex', latexLanguage)
     monaco.editor.defineTheme('datatex-dark', dataTexDarkTheme)
   }
 
-  function handleEditorDidMount(editor: any, monaco: Monaco) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function handleEditorDidMount(editor: any, monaco: Monaco): void {
     editorRef.current = editor
     monacoRef.current = monaco
     monaco.editor.setTheme('datatex-dark')
@@ -141,7 +166,7 @@ const App: React.FC = () => {
     editor.focus()
   }
 
-  const insertTextAtCursor = (text: string) => {
+  const insertTextAtCursor = (text: string): void => {
     if (!editorRef.current || !activeFileId) {
       message.warning('Open a file first!')
       return
@@ -163,21 +188,21 @@ const App: React.FC = () => {
   }
 
   // --- FILE ACTIONS ---
-  const handleEditorChange = (value: string | undefined) => {
+  const handleEditorChange = (value: string | undefined): void => {
     if (!activeFileId || value === undefined) return
     setOpenFiles((prev) =>
       prev.map((f) =>
-        String(f.id) === activeFileId
+        f.key === activeFileId && f.type === 'file'
           ? { ...f, content: value, isDirty: value !== f.originalContent }
           : f
       )
     )
   }
 
-  const handleCompile = async () => {
+  const handleCompile = async (): Promise<void> => {
     if (!activeFileId) return
-    const currentFile = openFiles.find((f) => String(f.id) === activeFileId)
-    if (!currentFile) return
+    const currentFile = openFiles.find((f) => f.key === activeFileId)
+    if (!currentFile || currentFile.type !== 'file' || !currentFile.content) return
 
     setStatusText('Compiling...')
     try {
@@ -191,29 +216,17 @@ const App: React.FC = () => {
       }
 
       const result = await window.api.compileFile(currentFile.content)
+
+      // Update logs regardless of success/failure
+      setCompilationLogs(result.logs || '')
+
       if (result.success && result.data) {
         setPdfData(result.data)
         message.success('Compilation successful')
         setStatusText('Ready')
       } else {
         message.error('Compilation failed')
-        console.error(result.logs)
-        Modal.error({
-          title: 'Compilation Error',
-          content: (
-            <div
-              style={{
-                maxHeight: '400px',
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'monospace'
-              }}
-            >
-              {result.logs}
-            </div>
-          ),
-          width: 800
-        })
+        setIsBottomPanelOpen(true) // Open bottom panel to show errors
         setStatusText('Compilation Failed')
       }
     } catch (error) {
@@ -223,29 +236,36 @@ const App: React.FC = () => {
     }
   }
 
-  const saveCurrentFile = async () => {
-    const currentFile = openFiles.find((f) => String(f.id) === activeFileId)
-    if (!currentFile || !currentFile.isDirty) return
+  const saveCurrentFile = async (): Promise<void> => {
+    const currentFile = openFiles.find((f) => f.key === activeFileId)
+    if (!currentFile || !currentFile.isDirty || currentFile.type !== 'file') return
     setStatusText('Saving...')
     try {
-      if (window.api) await window.api.updateFile(currentFile.id, currentFile.content)
+      if (window.api && currentFile.fileId)
+        await window.api.updateFile(currentFile.fileId, currentFile.content || '')
       setOpenFiles((prev) =>
         prev.map((f) =>
-          f.id === currentFile.id ? { ...f, isDirty: false, originalContent: f.content } : f
+          f.key === currentFile.key ? { ...f, isDirty: false, originalContent: f.content } : f
         )
       )
-      setDbFiles((prev) =>
-        prev.map((f) => (f.id === currentFile.id ? { ...f, content: currentFile.content } : f))
-      )
+      // Update dbFiles if needed
+      if (currentFile.fileId) {
+        setDbFiles((prev) =>
+          prev.map((f) =>
+            f.id === currentFile.fileId ? { ...f, content: currentFile.content || '' } : f
+          )
+        )
+      }
       message.success('Saved!')
       setStatusText('Saved')
     } catch (err) {
+      console.error(err)
       message.error('Failed to save')
       setStatusText('Error saving')
     }
   }
 
-  const handleCreateFile = async (values: { title: string; chapter: string }) => {
+  const handleCreateFile = async (values: { title: string; chapter: string }): Promise<void> => {
     try {
       const newFilePayload = {
         title: values.title.endsWith('.tex') ? values.title : `${values.title}.tex`,
@@ -265,11 +285,12 @@ const App: React.FC = () => {
       loadFilesFromDB()
       message.success('File created')
     } catch (err) {
+      console.error(err)
       message.error('Failed to create')
     }
   }
 
-  const handleDeleteFile = async () => {
+  const handleDeleteFile = async (): Promise<void> => {
     if (!activeFileId) return
     Modal.confirm({
       title: 'Delete File',
@@ -291,27 +312,109 @@ const App: React.FC = () => {
   }
 
   // --- NAVIGATION HELPER ---
-  const onNodeSelect = (selectedKeys: React.Key[]) => {
+  const onNodeSelect = (selectedKeys: React.Key[]): void => {
     if (selectedKeys.length === 0) return
     const key = String(selectedKeys[0])
     if (key.startsWith('chapter-')) return
     const fileId = Number(key)
     const file = dbFiles.find((f) => f.id === fileId)
     if (file) {
-      if (!openFiles.find((f) => f.id === file.id))
-        setOpenFiles([...openFiles, { ...file, originalContent: file.content, isDirty: false }])
+      const existingTab = openFiles.find((f) => f.key === String(file.id))
+      if (!existingTab) {
+        setOpenFiles([
+          ...openFiles,
+          {
+            key: String(file.id),
+            title: file.title,
+            type: 'file',
+            fileId: file.id,
+            content: file.content,
+            originalContent: file.content,
+            isDirty: false
+          }
+        ])
+      }
       setActiveFileId(String(file.id))
     }
   }
 
-  const closeTab = (targetKey: string | any) => {
-    const targetId = Number(targetKey)
-    const newOpenFiles = openFiles.filter((f) => f.id !== targetId)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const closeTab = (targetKey: string | any): void => {
+    const newOpenFiles = openFiles.filter((f) => f.key !== targetKey)
     setOpenFiles(newOpenFiles)
-    if (activeFileId === String(targetId))
-      setActiveFileId(
-        newOpenFiles.length > 0 ? String(newOpenFiles[newOpenFiles.length - 1].id) : null
-      )
+    if (activeFileId === targetKey)
+      setActiveFileId(newOpenFiles.length > 0 ? newOpenFiles[newOpenFiles.length - 1].key : null)
+  }
+
+  const handleOpenWizard = (name: 'preamble' | 'table' | 'tikz'): void => {
+    if (name === 'preamble') {
+      const wizardKey = 'wizard-preamble'
+      if (!openFiles.find((f) => f.key === wizardKey)) {
+        setOpenFiles([
+          ...openFiles,
+          {
+            key: wizardKey,
+            title: 'Preamble Wizard',
+            type: 'wizard',
+            wizardType: 'preamble'
+          }
+        ])
+      }
+      setActiveFileId(wizardKey)
+    } else if (name === 'table') {
+      setIsTableOpen(true)
+    }
+  }
+
+  const handleWizardInsert = (code: string): void => {
+    // Find the last active file tab to insert code into, or just create a new file?
+    // For now, let's create a new file with the code if no file is open, or append/insert to active file
+
+    // If we are in the wizard tab, we need to find a target file.
+    // Let's assume the user wants to copy-paste or we create a new file "Untitled.tex"
+
+    const targetFile = openFiles.find((f) => f.type === 'file')
+
+    if (targetFile) {
+      // Switch to that file and insert
+      setActiveFileId(targetFile.key)
+      // Wait for render? We might need to handle this better.
+      // For now, let's just append to content directly in state if editor ref is not available for that file immediately
+      // Actually, let's use the insertTextAtCursor logic but we need to ensure the editor is focused on that file.
+
+      // Better UX: Show a message "Code generated! Pasting to [File]..."
+      setTimeout(() => insertTextAtCursor(code), 100)
+    } else {
+      // Create new file
+      // Since we can't easily trigger "New File" flow from here without UI, let's just create a mock untitled file
+      const newId = -Date.now() // temporary negative ID
+
+      // We need to add it to DB files to be consistent or just OpenFiles?
+      // Let's just add to OpenFiles for now as a scratchpad
+      // Combine adding new file and closing wizard into one state update
+      setOpenFiles((prev) => {
+        // Filter out the wizard tab
+        const withoutWizard = prev.filter((f) => f.key !== 'wizard-preamble')
+
+        // Add the new file
+        return [
+          ...withoutWizard,
+          {
+            key: String(newId),
+            title: 'Untitled.tex',
+            type: 'file',
+            fileId: newId,
+            content: code,
+            originalContent: '',
+            isDirty: true
+          }
+        ]
+      })
+      setActiveFileId(String(newId))
+    }
+
+    // Just close the wizard tab if we inserted into existing file or created a new one
+    closeTab('wizard-preamble')
   }
 
   return (
@@ -327,149 +430,13 @@ const App: React.FC = () => {
             treeData={treeData}
             onNodeSelect={onNodeSelect}
             onNewFile={() => setIsNewFileOpen(true)}
-            onOpenWizard={(name) => {
-              if (name === 'preamble') setIsPreambleOpen(true)
-              if (name === 'table') setIsTableOpen(true)
-            }}
+            onOpenWizard={handleOpenWizard}
+            settings={settings}
+            onUpdateSettings={(newSettings: Partial<AppSettings>) =>
+              setSettings((prev) => ({ ...prev, ...newSettings }))
+            }
           />
 
-        {/* 1. NEW ACTIVITY BAR COMPONENT */}
-        <ActivityBar activeActivity={activeActivity} onActivityChange={setActiveActivity} />
-
-        {/* 2. NEW SIDE PANEL COMPONENT */}
-        <SidePanel
-          activeActivity={activeActivity}
-          treeData={treeData}
-          onNodeSelect={onNodeSelect}
-          onNewFile={() => setIsNewFileOpen(true)}
-          onOpenWizard={(name) => {
-            if (name === 'preamble') setIsPreambleOpen(true)
-            if (name === 'table') setIsTableOpen(true)
-          }}
-        />
-
-        {/* 3. MAIN EDITOR AREA (Tabs & Content) */}
-        {/* Αυτό το κομμάτι μπορεί να γίνει ξεχωριστό component "EditorArea.tsx" στο μέλλον */}
-        <Layout style={{ flex: 1, minWidth: 0, background: '#1e1e1e' }}>
-          <div style={{ height: 35, background: '#252526', display: 'flex', overflowX: 'auto' }}>
-            {openFiles.length === 0 ? (
-              <div style={{ padding: '8px 16px', color: '#888', fontSize: 12 }}>No files open</div>
-            ) : (
-              <Tabs
-                type="editable-card"
-                activeKey={activeFileId || undefined}
-                onChange={setActiveFileId}
-                onEdit={closeTab}
-                hideAdd
-                size="small"
-                items={openFiles.map((f) => ({
-                  label: (
-                    <span>
-                      {f.title}
-                      {f.isDirty && ' ●'}
-                    </span>
-                  ),
-                  key: String(f.id),
-                  closable: true
-                }))}
-                tabBarStyle={{ margin: 0, height: 35, borderBottom: '1px solid #303030' }}
-              />
-            )}
-          </div>
-
-          <Header
-            style={{
-              padding: '0 16px',
-              background: '#1e1e1e',
-              height: 40,
-              display: 'flex',
-              alignItems: 'center',
-              borderBottom: `1px solid ${colorBorder}`
-            }}
-          >
-            <span style={{ color: '#aaa', fontSize: 12 }}>
-              {activeFileId && openFiles.find((f) => String(f.id) === activeFileId)?.title}
-            </span>
-            <div style={{ flex: 1 }} />
-            {activeFileId && (
-              <Tooltip title="Delete">
-                <Button type="text" danger icon={<DeleteOutlined />} onClick={handleDeleteFile} />
-              </Tooltip>
-            )}
-            <Tooltip title="Save">
-              <Button
-                type="text"
-                icon={<SaveOutlined />}
-                onClick={saveCurrentFile}
-                style={{ color: '#ccc' }}
-              />
-            </Tooltip>
-            <Button
-              type="primary"
-              size="small"
-              icon={<PlayCircleOutlined />}
-              style={{ background: '#237804', marginLeft: 8 }}
-            >
-              Compile
-            </Button>
-          </Header>
-
-          <Layout>
-            <Content style={{ height: '100%', background: '#1f1f1f' }}>
-              {activeFileId ? (
-                <Editor
-                  height="100%"
-                  defaultLanguage="latex"
-                  value={openFiles.find((f) => String(f.id) === activeFileId)?.content || ''}
-                  onChange={handleEditorChange}
-                  theme="datatex-dark"
-                  beforeMount={handleEditorWillMount}
-                  onMount={handleEditorDidMount}
-                  options={{
-                    minimap: { enabled: true },
-                    fontSize: 14,
-                    fontFamily: "'Fira Code', monospace"
-                  }}
-                />
-              ) : (
-                <Empty
-                  description="Select a file"
-                  style={{ marginTop: 100 }}
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              )}
-            </Content>
-            <Sider
-              width="40%"
-              theme="light"
-              style={{ borderLeft: `1px solid ${colorBorder}`, background: '#f0f0f0' }}
-            >
-              <div
-                style={{
-                  height: 32,
-                  background: '#e0e0e0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  paddingLeft: 8,
-                  fontSize: 11,
-                  fontWeight: 'bold',
-                  color: '#555'
-                }}
-              >
-                PDF PREVIEW
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%'
-                }}
-              >
-                <Empty description="No PDF" />
-              </div>
-            </Sider>
-          {/* 3. MAIN EDITOR AREA (Tabs & Content) */}
           {/* Αυτό το κομμάτι μπορεί να γίνει ξεχωριστό component "EditorArea.tsx" στο μέλλον */}
           <Layout style={{ flex: 1, minWidth: 0, background: '#1e1e1e' }}>
             <div style={{ height: 35, background: '#252526', display: 'flex', overflowX: 'auto' }}>
@@ -492,7 +459,7 @@ const App: React.FC = () => {
                         {f.isDirty && ' ●'}
                       </span>
                     ),
-                    key: String(f.id),
+                    key: f.key,
                     closable: true
                   }))}
                   tabBarStyle={{ margin: 0, height: 35, borderBottom: '1px solid #303030' }}
@@ -511,50 +478,71 @@ const App: React.FC = () => {
               }}
             >
               <span style={{ color: '#aaa', fontSize: 12 }}>
-                {activeFileId && openFiles.find((f) => String(f.id) === activeFileId)?.title}
+                {activeFileId && openFiles.find((f) => f.key === activeFileId)?.title}
               </span>
               <div style={{ flex: 1 }} />
-              {activeFileId && (
-                <Tooltip title="Delete">
-                  <Button type="text" danger icon={<DeleteOutlined />} onClick={handleDeleteFile} />
-                </Tooltip>
+              {activeFileId && openFiles.find((f) => f.key === activeFileId)?.type === 'file' && (
+                <>
+                  <Tooltip title="Delete">
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={handleDeleteFile}
+                    />
+                  </Tooltip>
+                  <Tooltip title="Save">
+                    <Button
+                      type="text"
+                      icon={<SaveOutlined />}
+                      onClick={saveCurrentFile}
+                      style={{ color: '#ccc' }}
+                    />
+                  </Tooltip>
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<PlayCircleOutlined />}
+                    style={{ background: '#237804', marginLeft: 8 }}
+                    onClick={handleCompile}
+                  >
+                    Compile
+                  </Button>
+                </>
               )}
-              <Tooltip title="Save">
-                <Button
-                  type="text"
-                  icon={<SaveOutlined />}
-                  onClick={saveCurrentFile}
-                  style={{ color: '#ccc' }}
-                />
-              </Tooltip>
-              <Button
-                type="primary"
-                size="small"
-                icon={<PlayCircleOutlined />}
-                style={{ background: '#237804', marginLeft: 8 }}
-                onClick={handleCompile}
-              >
-                Compile
-              </Button>
             </Header>
 
             <Layout>
-              <Content style={{ height: '100%', background: '#1f1f1f' }}>
+              <Content style={{ height: '100%', background: '#1f1f1f', overflow: 'auto' }}>
                 {activeFileId ? (
-                  <Editor
-                    height="100%"
-                    defaultLanguage="latex"
-                    value={openFiles.find((f) => String(f.id) === activeFileId)?.content || ''}
-                    onChange={handleEditorChange}
-                    theme="datatex-dark"
-                    beforeMount={handleEditorWillMount}
-                    onMount={handleEditorDidMount}
-                    options={{
-                      minimap: { enabled: true },
-                      fontSize: 14,
-                      fontFamily: "'Fira Code', monospace"
-                    }}
-                  />
+                  (() => {
+                    const activeTab = openFiles.find((f) => f.key === activeFileId)
+                    if (!activeTab) return null
+
+                    if (activeTab.type === 'file') {
+                      return (
+                        <Editor
+                          height="100%"
+                          defaultLanguage="latex"
+                          value={activeTab.content || ''}
+                          onChange={handleEditorChange}
+                          theme="datatex-dark"
+                          beforeMount={handleEditorWillMount}
+                          onMount={handleEditorDidMount}
+                          options={{
+                            minimap: { enabled: settings.minimap },
+                            fontSize: settings.fontSize,
+                            wordWrap: settings.wordWrap ? 'on' : 'off',
+                            lineNumbers: settings.lineNumbers ? 'on' : 'off',
+                            fontFamily: "'Fira Code', monospace"
+                          }}
+                        />
+                      )
+                    } else if (activeTab.type === 'wizard' && activeTab.wizardType === 'preamble') {
+                      return <PreambleWizardView onInsert={handleWizardInsert} />
+                    }
+                    return null
+                  })()
                 ) : (
                   <Empty
                     description="Select a file"
@@ -605,6 +593,11 @@ const App: React.FC = () => {
                 </div>
               </Sider>
             </Layout>
+            <BottomPanel
+              isVisible={isBottomPanelOpen}
+              onClose={() => setIsBottomPanelOpen(false)}
+              logs={compilationLogs}
+            />
           </Layout>
         </Layout>
 

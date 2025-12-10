@@ -91,7 +91,7 @@ app.on('window-all-closed', () => {
 
 // --- IPC HANDLERS ---
 
-function setupIpcHandlers() {
+function setupIpcHandlers(): void {
   // Λήψη όλων των αρχείων
   ipcMain.handle('get-files', () => {
     console.log('--- IPC: UI requested files ---')
@@ -116,6 +116,12 @@ function setupIpcHandlers() {
       console.error('IPC create-file Error:', e)
       throw e
     }
+  })
+
+  // Στατιστικά Βάσης
+  ipcMain.handle('get-db-stats', () => {
+    if (!dbManager) return { files: 0, chapters: 0 }
+    return dbManager.getStats()
   })
 
   // Ενημέρωση περιεχομένου (Save)
@@ -158,10 +164,12 @@ function setupIpcHandlers() {
 
       // Εκτέλεση pdflatex
       // Σημείωση: Πρέπει το pdflatex να είναι στο PATH του συστήματος
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return new Promise((resolve) => {
         exec(
           `pdflatex -interaction=nonstopmode -output-directory="${tempDir}" "${texPath}"`,
           { timeout: 30000 },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (error, stdout, stderr) => {
             if (error) {
               console.error('Compilation Error:', error)
@@ -195,6 +203,7 @@ function setupIpcHandlers() {
           }
         )
       })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       console.error('IPC compile-file Unexpected Error:', e)
       return { success: false, logs: e.message }

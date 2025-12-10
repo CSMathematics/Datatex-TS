@@ -1,15 +1,21 @@
 import React from 'react'
 import { Layout, Button, Tree, Tooltip } from 'antd'
 import { PlusOutlined, FileAddOutlined, TableOutlined, ExperimentOutlined } from '@ant-design/icons'
+import DatabasePanel from './DatabasePanel'
+import SettingsPanel from './SettingsPanel'
+import { AppSettings } from '../../types'
 
 const { Sider } = Layout
 
 interface SidePanelProps {
   activeActivity: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   treeData: any[]
   onNodeSelect: (selectedKeys: React.Key[]) => void
   onNewFile: () => void
   onOpenWizard: (wizardName: 'preamble' | 'table' | 'tikz') => void
+  settings?: AppSettings
+  onUpdateSettings?: (settings: Partial<AppSettings>) => void
 }
 
 const SidePanel: React.FC<SidePanelProps> = ({
@@ -17,9 +23,11 @@ const SidePanel: React.FC<SidePanelProps> = ({
   treeData,
   onNodeSelect,
   onNewFile,
-  onOpenWizard
+  onOpenWizard,
+  settings,
+  onUpdateSettings
 }) => {
-  const renderContent = () => {
+  const renderContent = (): React.ReactNode => {
     switch (activeActivity) {
       case 'explorer':
         return (
@@ -104,6 +112,13 @@ const SidePanel: React.FC<SidePanelProps> = ({
             </Button>
           </div>
         )
+      case 'database':
+        return <DatabasePanel />
+      case 'settings':
+        if (settings && onUpdateSettings) {
+          return <SettingsPanel settings={settings} onUpdate={onUpdateSettings} />
+        }
+        return <div style={{ padding: 16 }}>Settings not available</div>
       default:
         return <div style={{ padding: 16, color: '#888' }}>Select an activity</div>
     }

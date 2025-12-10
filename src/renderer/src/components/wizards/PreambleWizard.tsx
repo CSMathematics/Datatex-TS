@@ -12,7 +12,7 @@ interface PreambleWizardProps {
 const PreambleWizard: React.FC<PreambleWizardProps> = ({ open, onCancel, onInsert }) => {
   const [form] = Form.useForm()
 
-  const handleGenerate = () => {
+  const handleGenerate = (): void => {
     form.validateFields().then((values) => {
       const { docClass, fontSize, packages, author, title, date } = values
 
