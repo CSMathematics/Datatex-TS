@@ -4,15 +4,15 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   // Ανάγνωση (υπήρχε ήδη)
   getFiles: () => ipcRenderer.invoke('get-files'),
-  
+
   // --- ΟΙ ΝΕΕΣ ΕΝΤΟΛΕΣ ΠΟΥ ΧΡΕΙΑΖΕΣΑΙ ---
-  
+
   // Δημιουργία: Στέλνει τα δεδομένα του νέου αρχείου
   createFile: (file) => ipcRenderer.invoke('create-file', file),
-  
+
   // Ενημέρωση (Save): Στέλνει το ID και το νέο περιεχόμενο
   updateFile: (id, content) => ipcRenderer.invoke('update-file', id, content),
-  
+
   // Διαγραφή: Στέλνει το ID του αρχείου προς διαγραφή
   deleteFile: (id) => ipcRenderer.invoke('delete-file', id)
 }

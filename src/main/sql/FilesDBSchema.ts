@@ -55,4 +55,4 @@ CREATE TABLE IF NOT EXISTS "Chapters_per_File" (
 -- Προσθέστε κι άλλους πίνακες εδώ αν χρειαστεί (Sections, Exercises, etc.)
 
 COMMIT;
-`;
+`
