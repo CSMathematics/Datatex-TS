@@ -10,7 +10,7 @@ interface TableWizardProps {
 const TableWizard: React.FC<TableWizardProps> = ({ open, onCancel, onInsert }) => {
   const [form] = Form.useForm()
 
-  const handleGenerate = () => {
+  const handleGenerate = (): void => {
     form.validateFields().then((values) => {
       const { rows, cols, center, border } = values
 

@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { app } from 'electron'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid' // Χρειάζεται: npm install uuid (και @types/uuid)
-import { dbSchema } from './sql/schema'
+import { dbSchema } from './sql/FilesDBSchema'
 
 export class DatabaseManager {
   private db: Database.Database | null = null
@@ -14,7 +14,7 @@ export class DatabaseManager {
     this.initDatabase(dbPath)
   }
 
-  private initDatabase(dbPath: string) {
+  private initDatabase(dbPath: string): void {
     try {
       this.db = new Database(dbPath)
       this.db.pragma('journal_mode = WAL')
@@ -30,9 +30,9 @@ export class DatabaseManager {
     }
   }
 
-  private seedDefaults() {
+  private seedDefaults(): void {
     if (!this.db) return
-
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // Έλεγχος και δημιουργία Default Field
     const fieldCount = this.db.prepare('SELECT count(*) as count FROM Fields').get() as {
       count: number
@@ -58,7 +58,8 @@ export class DatabaseManager {
 
   // --- PUBLIC API ---
 
-  public getAllFiles() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public getAllFiles(): any[] {
     if (!this.db) return []
     // JOIN για να πάρουμε το Chapter Name μαζί με το αρχείο
     const sql = `
@@ -76,7 +77,8 @@ export class DatabaseManager {
     return this.db.prepare(sql).all()
   }
 
-  public createFile(fileData: { title: string; content: string; type: string; chapter: string }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public createFile(fileData: { title: string; content: string; type: string; chapter: string }): any {
     if (!this.db) return null
 
     const fileId = uuidv4()
@@ -125,18 +127,32 @@ export class DatabaseManager {
     }
   }
 
-  public updateFile(id: string, content: string) {
+  public updateFile(id: string, content: string): boolean {
     if (!this.db) return false
     const stmt = this.db.prepare('UPDATE Database_Files SET FileContent = ? WHERE Id = ?')
     const info = stmt.run(content, id)
     return info.changes > 0
   }
 
-  public deleteFile(id: string) {
+  public deleteFile(id: string): boolean {
     if (!this.db) return false
     // Λόγω του ON DELETE CASCADE στο schema, θα διαγραφεί αυτόματα και από το Chapters_per_File
     const stmt = this.db.prepare('DELETE FROM Database_Files WHERE Id = ?')
     const info = stmt.run(id)
     return info.changes > 0
+  }
+
+  public getStats(): { files: number; chapters: number } {
+    if (!this.db) return { files: 0, chapters: 0 }
+    const files = this.db.prepare('SELECT count(*) as count FROM Database_Files').get() as {
+      count: number
+    }
+    const chapters = this.db.prepare('SELECT count(*) as count FROM Chapters').get() as {
+      count: number
+    }
+    return {
+      files: files.count,
+      chapters: chapters.count
+    }
   }
 }
