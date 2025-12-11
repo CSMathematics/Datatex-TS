@@ -17,8 +17,8 @@ import BottomPanel from './components/layout/BottomPanel'
 // 3. Wizards
 import NewFileModal from './components/wizards/NewFileModal'
 import PreambleWizard from './components/wizards/PreambleWizard'
-import TableWizard from './components/wizards/TableWizard'
 import PreambleWizardView from './components/wizards/PreambleWizardView'
+import TableWizardView from './components/wizards/TableWizardView'
 import { AppSettings, DBFile } from './types'
 
 const { Header, Content, Sider } = Layout
@@ -69,7 +69,6 @@ const App: React.FC = () => {
   // Modals Visibility
   const [isNewFileOpen, setIsNewFileOpen] = useState(false)
   const [isPreambleOpen, setIsPreambleOpen] = useState(false)
-  const [isTableOpen, setIsTableOpen] = useState(false)
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -362,7 +361,19 @@ const App: React.FC = () => {
       }
       setActiveFileId(wizardKey)
     } else if (name === 'table') {
-      setIsTableOpen(true)
+      const wizardKey = 'wizard-table'
+      if (!openFiles.find((f) => f.key === wizardKey)) {
+        setOpenFiles([
+          ...openFiles,
+          {
+            key: wizardKey,
+            title: 'Table Wizard',
+            type: 'wizard',
+            wizardType: 'table'
+          }
+        ])
+      }
+      setActiveFileId(wizardKey)
     }
   }
 
@@ -540,6 +551,8 @@ const App: React.FC = () => {
                       )
                     } else if (activeTab.type === 'wizard' && activeTab.wizardType === 'preamble') {
                       return <PreambleWizardView onInsert={handleWizardInsert} />
+                    } else if (activeTab.type === 'wizard' && activeTab.wizardType === 'table') {
+                      return <TableWizardView onInsert={handleWizardInsert} />
                     }
                     return null
                   })()
@@ -618,15 +631,6 @@ const App: React.FC = () => {
           onInsert={(code) => {
             insertTextAtCursor(code)
             setIsPreambleOpen(false)
-          }}
-        />
-
-        <TableWizard
-          open={isTableOpen}
-          onCancel={() => setIsTableOpen(false)}
-          onInsert={(code) => {
-            insertTextAtCursor(code)
-            setIsTableOpen(false)
           }}
         />
       </Layout>
