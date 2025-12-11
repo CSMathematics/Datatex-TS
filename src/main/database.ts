@@ -32,7 +32,6 @@ export class DatabaseManager {
 
   private seedDefaults(): void {
     if (!this.db) return
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // Έλεγχος και δημιουργία Default Field
     const fieldCount = this.db.prepare('SELECT count(*) as count FROM Fields').get() as {
       count: number
@@ -77,8 +76,13 @@ export class DatabaseManager {
     return this.db.prepare(sql).all()
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public createFile(fileData: { title: string; content: string; type: string; chapter: string }): any {
+  public createFile(fileData: {
+    title: string
+    content: string
+    type: string
+    chapter: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }): any {
     if (!this.db) return null
 
     const fileId = uuidv4()

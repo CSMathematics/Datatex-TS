@@ -19,6 +19,7 @@ import NewFileModal from './components/wizards/NewFileModal'
 import PreambleWizard from './components/wizards/PreambleWizard'
 import PreambleWizardView from './components/wizards/PreambleWizardView'
 import TableWizardView from './components/wizards/TableWizardView'
+import TikzWizardView from './components/wizards/TikzWizardView'
 import { AppSettings, DBFile } from './types'
 
 const { Header, Content, Sider } = Layout
@@ -33,7 +34,7 @@ interface OpenedTab {
   content?: string
   originalContent?: string
   // For wizards
-  wizardType?: 'preamble' | 'table'
+  wizardType?: 'preamble' | 'table' | 'tikz'
 }
 
 const App: React.FC = () => {
@@ -374,6 +375,20 @@ const App: React.FC = () => {
         ])
       }
       setActiveFileId(wizardKey)
+    } else if (name === 'tikz') {
+      const wizardKey = 'wizard-tikz'
+      if (!openFiles.find((f) => f.key === wizardKey)) {
+        setOpenFiles([
+          ...openFiles,
+          {
+            key: wizardKey,
+            title: 'TikZ / Plot Wizard',
+            type: 'wizard',
+            wizardType: 'tikz'
+          }
+        ])
+      }
+      setActiveFileId(wizardKey)
     }
   }
 
@@ -553,6 +568,8 @@ const App: React.FC = () => {
                       return <PreambleWizardView onInsert={handleWizardInsert} />
                     } else if (activeTab.type === 'wizard' && activeTab.wizardType === 'table') {
                       return <TableWizardView onInsert={handleWizardInsert} />
+                    } else if (activeTab.type === 'wizard' && activeTab.wizardType === 'tikz') {
+                      return <TikzWizardView onInsert={handleWizardInsert} />
                     }
                     return null
                   })()
