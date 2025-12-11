@@ -106,9 +106,9 @@ const SidePanel: React.FC<SidePanelProps> = ({
               block
               style={{ marginBottom: 12, textAlign: 'left', borderColor: '#303030', color: '#ccc' }}
               icon={<ExperimentOutlined />}
-              disabled
+              onClick={() => onOpenWizard('tikz')}
             >
-              TikZ Builder (Soon)
+              TikZ Builder
             </Button>
           </div>
         )
