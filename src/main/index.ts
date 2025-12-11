@@ -164,12 +164,10 @@ function setupIpcHandlers(): void {
 
       // Εκτέλεση pdflatex
       // Σημείωση: Πρέπει το pdflatex να είναι στο PATH του συστήματος
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return new Promise((resolve) => {
         exec(
-          `pdflatex -interaction=nonstopmode -output-directory="${tempDir}" "${texPath}"`,
+          `pdflatex -interaction=nonstopmode -shell-escape -output-directory="${tempDir}" "${texPath}"`,
           { timeout: 30000 },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (error, stdout, stderr) => {
             if (error) {
               console.error('Compilation Error:', error)
